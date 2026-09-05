@@ -1,0 +1,75 @@
+{
+  "name": "htmleditor",
+  "productName": "HTML Editor",
+  "version": "1.0.0",
+  "description": "A visual, no-code HTML editor for Linux. Open any HTML page and edit it like a document.",
+  "main": "main.js",
+  "license": "MIT",
+  "author": "HTML Editor contributors",
+  "homepage": "https://github.com/usbrofficial/htmleditor",
+  "scripts": {
+    "start": "electron .",
+    "test": "node test/run.js",
+    "icon": "node scripts/make-icon.js",
+    "dist": "electron-builder --linux",
+    "dist:appimage": "electron-builder --linux AppImage",
+    "dist:deb": "electron-builder --linux deb",
+    "postinstall": "node scripts/ensure-electron.js"
+  },
+  "devDependencies": {
+    "electron": "^44.2.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "io.github.usbrofficial.htmleditor",
+    "productName": "HTML Editor",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "templates/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/icon.png",
+      "category": "Development",
+      "synopsis": "Visual HTML editor",
+      "description": "Edit HTML pages visually, without writing code.",
+      "mimeTypes": [
+        "text/html"
+      ],
+      "desktop": {
+        "entry": {
+          "Name": "HTML Editor",
+          "Comment": "Edit HTML pages visually, without writing code",
+          "Keywords": "html;web;editor;wysiwyg;design;",
+          "StartupWMClass": "htmleditor"
+        }
+      }
+    },
+    "deb": {
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1",
+        "libsecret-1-0"
+      ],
+      "maintainer": "HTML Editor contributors <htmleditor@users.noreply.github.com>"
+    }
+  }
+}
