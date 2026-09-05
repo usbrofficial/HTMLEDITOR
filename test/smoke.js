@@ -7,7 +7,10 @@ const path = require('path');
 const assert = require('assert');
 
 const tmp = path.join(__dirname, 'tmp');
-const samplePath = path.join(tmp, 'sample.html');
+const samplePath = process.env.HE_EXPECTED_PATH || path.join(tmp, 'sample.html');
+// The second pass only checks that a file:// URL argument opens the page;
+// the full suite already ran in the first pass.
+const QUICK = process.env.HE_QUICK === '1';
 const outPath = path.join(tmp, 'out.html');
 
 require('../main.js');
@@ -47,6 +50,7 @@ async function runTests(win) {
 
   step('opens the file given on the command line');
   await waitFor(`window.__he && __he.state.path === ${JSON.stringify(samplePath)} && !!document.getElementById('page').contentDocument.querySelector('body[contenteditable]')`, 'sample page loaded');
+  if (QUICK) return;
 
   step('page scripts do not run inside the editor');
   const title = await js(`document.getElementById('page').contentDocument.title`);

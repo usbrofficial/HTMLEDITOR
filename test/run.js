@@ -4,6 +4,7 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const { pathToFileURL } = require('url');
 
 const electron = require('electron'); // path to the binary
 const smoke = path.join(__dirname, 'smoke.js');
@@ -34,11 +35,27 @@ fs.writeFileSync(path.join(tmp, 'sample.html'), `<!DOCTYPE html>
 </html>
 `);
 
-const args = ['--no-sandbox', '--disable-gpu', smoke, path.join(tmp, 'sample.html')];
-let cmd = electron;
-if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
-  args.unshift('-a', electron);
-  cmd = 'xvfb-run';
+// The app is launched twice: once with a plain path (terminal / npm start) and
+// once with a file:// URL, which is how the desktop entry and file managers
+// pass the file. Both must open the page.
+const samplePath = path.join(tmp, 'sample.html');
+const sampleUrl = pathToFileURL(samplePath).href;
+
+function run(fileArg, label) {
+  const args = ['--no-sandbox', '--disable-gpu', smoke, fileArg];
+  let cmd = electron;
+  if (!process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
+    args.unshift('-a', electron);
+    cmd = 'xvfb-run';
+  }
+  console.log(`\n=== ${label} ===`);
+  const r = spawnSync(cmd, args, {
+    stdio: 'inherit',
+    env: { ...process.env, ELECTRON_ENABLE_LOGGING: '', HE_EXPECTED_PATH: samplePath, HE_QUICK: label.includes('URL') ? '1' : '' },
+  });
+  return r.status === null ? 1 : r.status;
 }
-const r = spawnSync(cmd, args, { stdio: 'inherit', env: { ...process.env, ELECTRON_ENABLE_LOGGING: '' } });
-process.exit(r.status === null ? 1 : r.status);
+
+let status = run(samplePath, 'launched with a file path');
+if (status === 0) status = run(sampleUrl, 'launched with a file:// URL (desktop entry)');
+process.exit(status);

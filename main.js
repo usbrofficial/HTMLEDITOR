@@ -9,6 +9,7 @@ const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
 const os = require('os');
+const { fileURLToPath } = require('url');
 
 const APP_NAME = 'HTML Editor';
 const isDev = !app.isPackaged;
@@ -60,13 +61,26 @@ function registerPreviewProtocol() {
 // Helpers
 // ---------------------------------------------------------------------------
 
+// File managers launch us through the .desktop entry, which passes the file
+// either as a plain path or as a file:// URL. Accept both.
+function pathFromArg(arg) {
+  if (/^file:\/\//i.test(arg)) {
+    try { return fileURLToPath(arg); } catch { return null; }
+  }
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(arg)) return null; // some other protocol: not a local file
+  return path.resolve(arg);
+}
+
 function htmlFileFromArgv(argv) {
   // Drop Chromium/Electron switches, then skip the executable (and the script
   // path when running unpackaged) to find the page the user wants to open.
   const args = argv.filter((a) => !a.startsWith('--')).slice(isDev ? 2 : 1);
-  const candidate = args.find((a) => /\.(x?html?)$/i.test(a));
-  if (!candidate) return null;
-  return path.resolve(candidate);
+  for (const arg of args) {
+    if (!/\.(x?html?)$/i.test(arg)) continue;
+    const resolved = pathFromArg(arg);
+    if (resolved) return resolved;
+  }
+  return null;
 }
 
 function sendToRenderer(channel, ...args) {
@@ -413,8 +427,10 @@ if (!gotLock) {
     }
   });
 
-  app.on('open-file', (event, filePath) => {
+  app.on('open-file', (event, urlOrPath) => {
     event.preventDefault();
+    const filePath = pathFromArg(urlOrPath);
+    if (!filePath) return;
     if (rendererReady) {
       readHtml(filePath).then((doc) => sendToRenderer('file:opened-externally', doc)).catch(() => {});
     } else {
