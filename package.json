@@ -23,7 +23,7 @@
   "build": {
     "appId": "io.github.usbrofficial.htmleditor",
     "productName": "HTML Editor",
-    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "artifactName": "${name}-${version}-${arch}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"

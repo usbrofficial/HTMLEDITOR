@@ -22,27 +22,43 @@ and save a normal HTML file that works everywhere.
 
 ## Install
 
-### Option A: packaged app (recommended)
+### Option A: download a ready-made package (no Node.js needed)
 
-Build the packages once (needs Node.js 18+ and npm):
+1. Open the repository's **Actions** tab on GitHub and pick the latest "Build Linux packages" run (or click *Run workflow* to start one).
+2. Download the `htmleditor-linux-packages` artifact and unzip it. It contains:
+   - `htmleditor-1.0.0-amd64.deb` for Zorin OS, Ubuntu, Linux Mint, Debian and other apt-based systems.
+   - `htmleditor-1.0.0-x86_64.AppImage` for any other distribution.
+3. Install the `.deb` by double-clicking it, or from a terminal in the folder where you saved it:
+
+   ```bash
+   sudo apt install ./htmleditor-1.0.0-amd64.deb
+   ```
+
+   "HTML Editor" then appears in your application menu, and `.html` files get an "Open With HTML Editor" entry.
+
+   For the AppImage: right-click it, choose Properties, allow executing it as a program, then double-click it.
+
+Tagged releases (`v1.0.0` and so on) publish the same files on the GitHub **Releases** page.
+
+### Option B: build the package yourself
+
+Needs Node.js 18+ and npm (on Zorin/Ubuntu: `curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install nodejs`).
 
 ```bash
-git clone https://github.com/usbrofficial/htmleditor.git
-cd htmleditor
+git clone https://github.com/usbrofficial/HTMLEDITOR.git
+cd HTMLEDITOR
 npm install
 npm run dist
+sudo apt install ./dist/htmleditor-1.0.0-amd64.deb
 ```
 
-This creates, in `dist/`:
+The `dist/` folder is only created by `npm run dist`; it is not part of the repository. If apt says "Unsupported file", check the exact path with `ls dist/`.
 
-- `HTML Editor-1.0.0-x86_64.AppImage`: make it executable and double-click it (or run `./HTML\ Editor-*.AppImage`). Works on any distribution.
-- `HTML Editor-1.0.0-amd64.deb`: install on Debian/Ubuntu/Mint with `sudo apt install ./dist/HTML\ Editor-*.deb`. Adds "HTML Editor" to your application menu and lets you open `.html` files with it.
-
-### Option B: run from source
+### Option C: run from source
 
 ```bash
-git clone https://github.com/usbrofficial/htmleditor.git
-cd htmleditor
+git clone https://github.com/usbrofficial/HTMLEDITOR.git
+cd HTMLEDITOR
 npm install
 npm start                # or: npm start -- path/to/page.html
 ```
@@ -72,7 +88,7 @@ npm install     # installs Electron and electron-builder
 npm start       # run the app
 npm test        # smoke test: launches the real app under Xvfb and exercises editing, undo, code view and saving
 npm run icon    # re-render build/icon.png from build/icon.svg (needs Playwright)
-npm run dist    # build AppImage + .deb into dist/
+npm run dist    # build AppImage + .deb into dist/ (also done by the GitHub Actions workflow)
 ```
 
 Project layout:
