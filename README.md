@@ -23,23 +23,21 @@ and save a normal HTML file that works everywhere.
 
 ## Install
 
-### Option A: download a ready-made package (no Node.js needed)
+### Option A: download the package (no Node.js needed)
 
-1. Open the repository's **Actions** tab on GitHub and pick the latest "Build Linux packages" run (or click *Run workflow* to start one).
-2. Download the `htmleditor-linux-packages` artifact and unzip it. It contains:
-   - `htmleditor-1.0.0-amd64.deb` for Zorin OS, Ubuntu, Linux Mint, Debian and other apt-based systems.
-   - `htmleditor-1.0.0-x86_64.AppImage` for any other distribution.
-3. Install the `.deb` by double-clicking it, or from a terminal in the folder where you saved it:
+Go to the **Releases** page: https://github.com/usbrofficial/HTMLEDITOR/releases/latest
 
-   ```bash
-   sudo apt install ./htmleditor-1.0.0-amd64.deb
-   ```
+- **Zorin OS, Ubuntu, Linux Mint, Debian:** download `htmleditor-1.0.0-amd64.deb`, then double-click it (Zorin opens its software installer), or run this in a terminal, which downloads and installs it for you:
 
-   "HTML Editor" then appears in your application menu, and `.html` files get an "Open With HTML Editor" entry.
+  ```bash
+  cd ~/Downloads && wget -O htmleditor.deb https://github.com/usbrofficial/HTMLEDITOR/releases/latest/download/htmleditor-1.0.0-amd64.deb && sudo apt install ./htmleditor.deb
+  ```
 
-   For the AppImage: right-click it, choose Properties, allow executing it as a program, then double-click it.
+  "HTML Editor" then appears in your application menu, and `.html` files get an "Open With HTML Editor" entry.
 
-Tagged releases (`v1.0.0` and so on) publish the same files on the GitHub **Releases** page.
+- **Any other distribution:** download `htmleditor-1.0.0-x86_64.AppImage`, right-click it, choose Properties, allow executing it as a program, then double-click it.
+
+If `apt` says **"Unsupported file"**, it cannot find the file at the path you typed: make sure the terminal is in the folder where the file was saved (`cd ~/Downloads`) and that the download is not still inside a `.zip`.
 
 ### Option B: build the package yourself
 

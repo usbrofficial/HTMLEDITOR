@@ -3,7 +3,6 @@ name: Build Linux packages
 on:
   push:
     branches: ["**"]
-    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -40,10 +39,34 @@ jobs:
             dist/*.AppImage
           if-no-files-found: error
 
-      - name: Publish release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      # Publish the packages on the Releases page so they can be downloaded
+      # with a plain link (Actions artifacts need a GitHub login). The release
+      # tag is moved to the commit that was built, so it always matches.
+      - name: Read version
+        id: version
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Point the release tag at this commit
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "${{ steps.version.outputs.tag }}"
+          git push -f origin "refs/tags/${{ steps.version.outputs.tag }}"
+
+      - name: Publish release
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: HTML Editor ${{ steps.version.outputs.tag }}
+          body: |
+            Visual, no-code HTML editor for Linux.
+
+            **Zorin OS / Ubuntu / Linux Mint / Debian:** download the `.deb` and double-click it, or run
+            `sudo apt install ./htmleditor-*.deb` in the folder you saved it to.
+
+            **Other distributions:** download the `.AppImage`, make it executable and run it.
           files: |
             dist/*.deb
             dist/*.AppImage
