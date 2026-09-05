@@ -11,9 +11,9 @@
     "start": "electron .",
     "test": "node test/run.js",
     "icon": "node scripts/make-icon.js",
-    "dist": "electron-builder --linux",
-    "dist:appimage": "electron-builder --linux AppImage",
-    "dist:deb": "electron-builder --linux deb",
+    "dist": "electron-builder --linux --publish never",
+    "dist:appimage": "electron-builder --linux AppImage --publish never",
+    "dist:deb": "electron-builder --linux deb --publish never",
     "postinstall": "node scripts/ensure-electron.js"
   },
   "devDependencies": {
@@ -55,7 +55,9 @@
           "Keywords": "html;web;editor;wysiwyg;design;",
           "StartupWMClass": "htmleditor"
         }
-      }
+      },
+      "desktopName": "htmleditor.desktop",
+      "syncDesktopName": true
     },
     "deb": {
       "depends": [
