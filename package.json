@@ -56,7 +56,6 @@
           "StartupWMClass": "htmleditor"
         }
       },
-      "desktopName": "htmleditor.desktop",
       "syncDesktopName": true
     },
     "deb": {
@@ -73,5 +72,6 @@
       ],
       "maintainer": "HTML Editor contributors <htmleditor@users.noreply.github.com>"
     }
-  }
+  },
+  "desktopName": "htmleditor.desktop"
 }
