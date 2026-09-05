@@ -4,7 +4,7 @@
 // filesystem. The renderer (src/) never gets direct Node access; it talks to
 // this process through the small API exposed in preload.js.
 
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeImage, protocol, net } = require('electron');
 const fs = require('fs');
 const fsp = require('fs/promises');
 const path = require('path');
@@ -20,6 +20,41 @@ let pendingOpenPath = null; // file passed on the command line before the window
 let rendererReady = false;
 
 app.setName(APP_NAME);
+
+// The live preview is served through its own URL scheme so that it gets an
+// origin of its own: scripts in the previewed page cannot reach the editor UI
+// (all file:// pages would otherwise count as the same origin).
+const PREVIEW_SCHEME = 'he-preview';
+protocol.registerSchemesAsPrivileged([
+  { scheme: PREVIEW_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false } },
+]);
+let previewRoot = null; // folder the preview may read files from (the page's folder)
+
+const PREVIEW_MIME = {
+  '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.json': 'application/json',
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
+  '.webp': 'image/webp', '.avif': 'image/avif', '.ico': 'image/x-icon', '.woff': 'font/woff', '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf', '.otf': 'font/otf', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.txt': 'text/plain; charset=utf-8',
+};
+
+function registerPreviewProtocol() {
+  protocol.handle(PREVIEW_SCHEME, async (request) => {
+    if (!previewRoot) return new Response('No preview', { status: 404 });
+    const url = new URL(request.url);
+    const rel = decodeURIComponent(url.pathname);
+    const file = path.resolve(previewRoot, '.' + (rel.startsWith('/') ? rel : '/' + rel));
+    // Only files inside the page's folder are reachable.
+    if (file !== previewRoot && !file.startsWith(previewRoot + path.sep)) return new Response('Forbidden', { status: 403 });
+    try {
+      const data = await fsp.readFile(file);
+      const type = PREVIEW_MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+      return new Response(data, { headers: { 'Content-Type': type } });
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -124,7 +159,8 @@ function buildMenu() {
         { label: 'Save', accelerator: 'CmdOrCtrl+S', click: menuAction('save') },
         { label: 'Save As…', accelerator: 'CmdOrCtrl+Shift+S', click: menuAction('save-as') },
         { type: 'separator' },
-        { label: 'Preview in Browser', accelerator: 'F5', click: menuAction('preview') },
+        { label: 'Preview', accelerator: 'CmdOrCtrl+P', click: menuAction('toggle-preview') },
+        { label: 'Open in Browser', accelerator: 'F5', click: menuAction('preview') },
         { type: 'separator' },
         { label: 'Quit', accelerator: 'CmdOrCtrl+Q', click: () => app.quit() },
       ],
@@ -281,19 +317,51 @@ ipcMain.handle('file:pick-image', async (_e, docPath) => {
   return { src: `data:${mime};base64,${buf.toString('base64')}`, name, embedded: true };
 });
 
-ipcMain.handle('file:preview', async (_e, content, docPath) => {
-  // Preview a temporary copy next to the real file so relative images work.
-  let previewPath;
+// Preview copies are written next to the real file so relative images and
+// stylesheets keep working. They are removed when no longer needed.
+const previewFiles = new Set();
+
+function previewPathFor(docPath) {
   if (docPath) {
     const dir = path.dirname(docPath);
     const base = path.basename(docPath, path.extname(docPath));
-    previewPath = path.join(dir, `.${base}.preview.html`);
-  } else {
-    previewPath = path.join(os.tmpdir(), `htmleditor-preview-${process.pid}.html`);
+    return path.join(dir, `.${base}.preview.html`);
   }
+  return path.join(os.tmpdir(), `htmleditor-preview-${process.pid}.html`);
+}
+
+async function writePreview(content, docPath) {
+  const previewPath = previewPathFor(docPath);
   await fsp.writeFile(previewPath, content, 'utf8');
+  previewFiles.add(previewPath);
+  return previewPath;
+}
+
+async function removePreview(previewPath) {
+  if (!previewPath || !previewFiles.has(previewPath)) return;
+  previewFiles.delete(previewPath);
+  await fsp.unlink(previewPath).catch(() => {});
+}
+
+// Open the page in the user's default browser.
+ipcMain.handle('file:preview', async (_e, content, docPath) => {
+  const previewPath = await writePreview(content, docPath);
   await shell.openPath(previewPath);
   return { path: previewPath };
+});
+
+// In-app live preview: write the file and hand back a URL the renderer can load.
+ipcMain.handle('file:write-preview', async (_e, content, docPath) => {
+  const previewPath = await writePreview(content, docPath);
+  previewRoot = path.dirname(previewPath);
+  const url = `${PREVIEW_SCHEME}://page/${encodeURIComponent(path.basename(previewPath))}`;
+  return { path: previewPath, url };
+});
+
+ipcMain.handle('file:remove-preview', async (_e, previewPath) => removePreview(previewPath));
+
+app.on('will-quit', () => {
+  for (const f of previewFiles) { try { fs.unlinkSync(f); } catch {} }
 });
 
 ipcMain.handle('app:set-dirty', (_e, dirty, fileName) => {
@@ -355,6 +423,7 @@ if (!gotLock) {
   });
 
   app.whenReady().then(() => {
+    registerPreviewProtocol();
     pendingOpenPath = htmlFileFromArgv(process.argv);
     createWindow();
     app.on('activate', () => {

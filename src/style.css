@@ -55,10 +55,19 @@ code { font-family: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", monospace
 .block-card:active { cursor: grabbing; }
 .block-card svg { width: 22px; height: 22px; }
 
-#canvas { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; background: #e9ebef; }
-#canvas-scroll { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 18px; }
-#page { width: 100%; height: 100%; max-width: 1400px; border: 0; background: #fff; box-shadow: 0 2px 12px rgba(16, 24, 40, 0.12); border-radius: 4px; }
-#canvas.zoomed #canvas-scroll { display: block; }
+#canvas { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; background: #fff; }
+#canvas-scroll { flex: 1; overflow: auto; }
+#page { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+#canvas-scroll[hidden] { display: none; }
+#preview-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; background: #fff; }
+#preview-wrap[hidden] { display: none; }
+.preview-hint { padding: 6px 14px; background: #ecfdf5; color: #065f46; border-bottom: 1px solid #a7f3d0; font-size: 12px; }
+#preview { flex: 1; border: 0; width: 100%; background: #fff; }
+.mode-switch { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.mode-switch button { height: 28px; padding: 0 14px; border: 0; background: #fff; cursor: pointer; font-weight: 500; }
+.mode-switch button + button { border-left: 1px solid var(--border); }
+.mode-switch button.active { background: var(--accent); color: #fff; }
+#app.previewing #tb-history, #app.previewing #tb-format, #app.previewing #tb-colors, #app.previewing #tb-align, #app.previewing #tb-lists, #app.previewing #tb-insert, #app.previewing #block-format, #app.previewing #font-size { opacity: .35; pointer-events: none; }
 #code-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; background: #1e1e1e; }
 #code-wrap[hidden] { display: none; }
 .code-hint { padding: 8px 14px; background: #fff8e1; color: #6b5300; border-bottom: 1px solid #f5e6a8; font-size: 12px; }

@@ -9,14 +9,15 @@ and save a normal HTML file that works everywhere.
 
 ## What it does
 
-- **Edit like a document.** The page is shown exactly as a browser renders it. Click on anything and type.
+- **Edit like a document.** The page is shown exactly as a browser renders it, full width and with real video thumbnails. Click on anything and type.
+- **Preview for real.** One click switches to a live preview inside the app where menus, buttons, scripts and videos all work, then back to editing.
 - **Add blocks.** Headings, text, images, buttons, links, lists, tables, quotes, dividers, YouTube/Vimeo videos, two-column layouts, sections and spacers. Click a block to add it, or drag it to the exact spot.
 - **Tweak without CSS.** Select an item and use the right-hand panel: link address, image file, alignment, colours, text size, font, padding, margins, rounded corners, borders, width/height.
 - **Rearrange.** Move items up or down, duplicate, delete, or select the surrounding container.
 - **Tables.** Add/remove rows and columns, toggle borders.
 - **Templates.** Start from a blank page, a landing page, a blog article or a portfolio.
 - **Page settings.** Title, language, background colour, text colour and font in one dialog.
-- **Preview** the page in your default browser with one click.
+- **Open in browser** to check the page in your default browser too.
 - **Undo / redo** for everything, find text, zoom, and an optional **Code** view for the raw HTML if you ever want it.
 - Your file is respected: `<head>`, stylesheets and scripts are kept as they are. Scripts inside the page never run while you edit.
 
@@ -75,7 +76,8 @@ To get an entry in your application menu while running from source:
 2. Click on the page and type. Use the toolbar for bold, italic, colours, alignment and lists.
 3. Use **Add to page** (left) to insert blocks below the selected item, or drag a block onto the page.
 4. Use **Selected item** (right) to change what you selected. Press `Esc` to select the surrounding container, `Delete` to remove a selected image, table, video or divider.
-5. **Save** (Ctrl+S) writes the HTML file. **Preview** (F5) opens it in your browser.
+5. **Preview** (Ctrl+P) shows the page exactly as visitors will see it, with everything working. Press **Edit** (or Esc) to continue editing.
+6. **Save** (Ctrl+S) writes the HTML file. **Browser** (F5) opens it in your web browser.
 
 Images you pick from your computer are linked with a relative path when the page has been saved. If the page is still untitled they are embedded in the page instead, so nothing breaks; save the page first if you would rather link to the files.
 
@@ -106,7 +108,7 @@ scripts/           Helper scripts (launcher install, icon rendering)
 test/              Smoke test
 ```
 
-The edited page lives in a sandboxed iframe: its scripts are disabled while editing, its stylesheets apply normally, and relative paths resolve against the file's folder. On save the document is serialised back with all editor markup removed.
+The edited page lives in a sandboxed iframe: its scripts are disabled while editing, its stylesheets apply normally, and relative paths resolve against the file's folder. On save the document is serialised back with all editor markup removed. Preview writes a temporary copy next to the file and loads it through the app's own `he-preview://` scheme, so the page runs with scripts enabled but in its own origin, isolated from the editor and limited to reading files inside the page's folder.
 
 ## License
 

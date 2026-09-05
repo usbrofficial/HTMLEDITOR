@@ -147,6 +147,42 @@ async function runTests(win) {
   await waitFor(`__he.state.path === null && document.getElementById('page').contentDocument.querySelector('.hero')`, 'template loaded');
   assert.strictEqual(await js(`document.getElementById('page').contentDocument.querySelector('base')`), null, 'no base for untitled pages');
 
+  step('video embeds show a thumbnail while editing, without touching the page');
+  await js(`__he.loadDocument(${JSON.stringify(fs.readFileSync(samplePath, 'utf8'))}, ${JSON.stringify(samplePath)})`);
+  await waitFor(`document.getElementById('page').contentDocument.getElementById('he-embed-styles') !== null`, 'embed style injected');
+  assert.ok(await js(`document.getElementById('page').contentDocument.getElementById('he-embed-styles').textContent.includes('img.youtube.com/vi/dQw4w9WgXcQ/')`), 'thumbnail rule present');
+  assert.ok(!(await js('__he.getHtml()')).includes('he-embed-styles'), 'thumbnail rules are not saved');
+
+  step('preview mode renders the page for real, then returns to editing');
+  await js('__he.setPreview(true)');
+  await waitFor(`__he.state.previewing === true && !document.getElementById('preview-wrap').hidden`, 'preview shown');
+  const previewPath = await js('__he.state.previewPath');
+  assert.ok(previewPath && previewPath.endsWith('.sample.preview.html'), 'preview written next to the file: ' + previewPath);
+  assert.ok(fs.existsSync(previewPath), 'preview file exists');
+  assert.ok(fs.readFileSync(previewPath, 'utf8').includes('src="https://www.youtube.com/embed/'), 'preview has the real embed');
+  let previewFrame = null;
+  for (let i = 0; i < 100 && !previewFrame; i++) {
+    previewFrame = win.webContents.mainFrame.frames.find((f) => f.url.startsWith('he-preview://'));
+    if (!previewFrame) await sleep(50);
+  }
+  assert.ok(previewFrame, 'preview frame found');
+  let ran = false;
+  for (let i = 0; i < 100 && !ran; i++) { ran = await previewFrame.executeJavaScript('window.__pageScriptRan === true').catch(() => false); if (!ran) await sleep(50); }
+  assert.strictEqual(ran, true, 'page scripts run in the preview');
+  const isolated = await previewFrame.executeJavaScript('(function(){ try { return window.parent.document ? "reachable" : "isolated"; } catch (e) { return "isolated"; } })()');
+  assert.strictEqual(isolated, 'isolated', 'preview page cannot touch the editor UI');
+  let imgOk = false;
+  for (let i = 0; i < 100 && !imgOk; i++) { imgOk = await previewFrame.executeJavaScript('(function(){ const i = document.querySelector("img"); return !!(i && i.complete && i.naturalWidth === 1); })()').catch(() => false); if (!imgOk) await sleep(50); }
+  assert.strictEqual(imgOk, true, 'relative images load in the preview');
+  const outside = await previewFrame.executeJavaScript('fetch("../package.json").then(r => r.status).catch(() => "error")');
+  assert.notStrictEqual(outside, 200, 'preview cannot read files outside the page folder');
+  assert.strictEqual(await js(`document.getElementById('blocks-panel').hidden`), true, 'panels hidden while previewing');
+  await js('__he.setPreview(false)');
+  await waitFor(`__he.state.previewing === false && document.getElementById('preview-wrap').hidden && !document.getElementById('blocks-panel').hidden`, 'back to edit mode');
+  for (let i = 0; i < 40 && fs.existsSync(previewPath); i++) await sleep(50);
+  assert.ok(!fs.existsSync(previewPath), 'preview file removed');
+  assert.ok(await js(`document.getElementById('page').contentDocument.querySelector('body[contenteditable]') !== null`), 'still editable');
+
   step('no console errors in the renderer');
   if (consoleErrors.length) throw new Error('Renderer console errors:\n' + consoleErrors.join('\n'));
 }

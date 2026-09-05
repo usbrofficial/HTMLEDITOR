@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <!-- The edited page (srcdoc iframe) inherits this policy, so resources it references must be allowed; scripts stay locked to the app's own files. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src * 'unsafe-inline'; img-src * data: blob: file:; font-src * data: file:; media-src * data: blob: file:; frame-src 'self' about: file:; connect-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src * 'unsafe-inline'; img-src * data: blob: file:; font-src * data: file:; media-src * data: blob: file:; frame-src 'self' about: file: he-preview:; connect-src 'none'">
 <title>HTML Editor</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -53,6 +53,13 @@
     <div class="tb-sep"></div>
     <div class="tb-group" id="tb-insert"></div>
     <div class="tb-spacer"></div>
+    <div class="tb-group" id="tb-mode" role="group" aria-label="Edit or preview">
+      <div class="mode-switch">
+        <button type="button" id="mode-edit" class="active" title="Edit the page">Edit</button>
+        <button type="button" id="mode-preview" title="See the page exactly as visitors will (Ctrl+P)">Preview</button>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
     <div class="tb-group" id="tb-view"></div>
   </header>
 
@@ -79,6 +86,10 @@
       </div>
       <div id="canvas-scroll">
         <iframe id="page" title="Page being edited" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div id="preview-wrap" hidden>
+        <div class="preview-hint">This is exactly how the page looks in a browser. Switch back to <b>Edit</b> to change it.</div>
+        <iframe id="preview" title="Live preview" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
       </div>
       <div id="code-wrap" hidden>
         <div class="code-hint">You are viewing the HTML code. Switch back to <b>Design</b> to keep editing visually — your code changes will be applied.</div>
@@ -205,7 +216,7 @@
         <h3>4. Fine-tune</h3>
         <p>When you click something, the <b>Selected item</b> panel on the right shows its options: link address, image file, colors, spacing, size… You can also move it up/down, duplicate or delete it.</p>
         <h3>5. Save and preview</h3>
-        <p><b>Save</b> writes a normal HTML file you can upload anywhere. <b>Preview</b> opens the page in your web browser.</p>
+        <p>The page always looks the way visitors will see it. Press <b>Preview</b> to try it out for real (buttons, menus and videos all work), then <b>Edit</b> to continue. <b>Save</b> writes a normal HTML file you can upload anywhere.</p>
         <h3>Optional: the code</h3>
         <p>If you ever want to see or edit the raw HTML, press <b>Code</b> in the toolbar. It's never required.</p>
       </div>
@@ -221,7 +232,8 @@
       <tr><td>Ctrl+N</td><td>New page</td></tr>
       <tr><td>Ctrl+O</td><td>Open</td></tr>
       <tr><td>Ctrl+S / Ctrl+Shift+S</td><td>Save / Save as</td></tr>
-      <tr><td>F5</td><td>Preview in browser</td></tr>
+      <tr><td>Ctrl+P</td><td>Switch between Edit and Preview</td></tr>
+      <tr><td>F5</td><td>Open the page in your browser</td></tr>
       <tr><td>Ctrl+Z / Ctrl+Shift+Z</td><td>Undo / Redo</td></tr>
       <tr><td>Ctrl+B / I / U</td><td>Bold / Italic / Underline</td></tr>
       <tr><td>Ctrl+K</td><td>Add link</td></tr>

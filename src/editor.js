@@ -26,6 +26,9 @@
     snapshot: '',        // body HTML of the last committed state
     zoom: 1,
     codeMode: false,
+    previewing: false,
+    previewPath: null,
+    panelsBeforePreview: null,
     codeSnapshot: '',
     outlines: false,
     pendingInsert: null, // { parent, before } set by drag & drop before a dialog opens
@@ -158,14 +161,40 @@
     body[data-he-editing] { min-height: 100vh; box-sizing: border-box; cursor: text; }
     body[data-he-editing]:focus { outline: none; }
     [data-he-selected] { outline: 2px solid #2563eb !important; outline-offset: 2px !important; }
-    [data-he-hover]:not([data-he-selected]) { outline: 1px dashed #60a5fa !important; outline-offset: 1px !important; }
+    [data-he-hover]:not([data-he-selected]) { outline: 1px solid rgba(37,99,235,.45) !important; outline-offset: 1px !important; }
     body[data-he-outlines] *:not(br):not(script):not(style):not([data-he-injected]) { outline: 1px dashed rgba(100,116,139,.4); outline-offset: -1px; }
-    body[data-he-editing] iframe[data-he-src] { background: #0f172a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='1.5'%3E%3Cpolygon points='10 8 16 12 10 16 10 8'/%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3C/svg%3E") center / 64px no-repeat; pointer-events: auto; }
+    body[data-he-editing] iframe[data-he-src] { background-color: #0f172a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cpath d='M66.5 7.7c-.8-2.9-3-5.2-5.9-6C55.4.3 34 0 34 0S12.6.3 7.4 1.7c-2.9.8-5.1 3.1-5.9 6C.1 13 0 24 0 24s.1 11 1.5 16.3c.8 2.9 3 5.2 5.9 6C12.6 47.7 34 48 34 48s21.4-.3 26.6-1.7c2.9-.8 5.1-3.1 5.9-6C67.9 35 68 24 68 24s-.1-11-1.5-16.3z' fill='%23f00'/%3E%3Cpath d='M45 24L27 14v20' fill='%23fff'/%3E%3C/svg%3E"); background-position: center; background-size: cover, 68px 48px; background-repeat: no-repeat; pointer-events: auto; }
     body[data-he-editing] [data-he-injected] { pointer-events: none; }
     body[data-he-editing] a { cursor: text; }
     body[data-he-editing] img, body[data-he-editing] hr, body[data-he-editing] table { cursor: pointer; }
     #he-drop { position: absolute; height: 3px; background: #2563eb; border-radius: 2px; box-shadow: 0 0 0 2px rgba(37,99,235,.25); z-index: 2147483647; }
   `;
+
+  // Show the real video thumbnail behind the play button for YouTube embeds so
+  // the page looks finished while editing. Rules live in an injected style
+  // element keyed by the embed URL, so the page itself is not modified.
+  function refreshEmbedStyles() {
+    const d = doc();
+    if (!d || !d.head) return;
+    let st = d.getElementById('he-embed-styles');
+    const rules = [];
+    $$('iframe[data-he-src]', d.body || d).forEach((f) => {
+      const src = f.getAttribute('data-he-src') || '';
+      const m = src.match(/youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/);
+      if (!m) return;
+      const sel = `iframe[data-he-src="${src.replace(/["\\]/g, '\\$&')}"]`;
+      rules.push(`body[data-he-editing] ${sel} { background-image: url("https://img.youtube.com/vi/${m[1]}/hqdefault.jpg"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cpath d='M66.5 7.7c-.8-2.9-3-5.2-5.9-6C55.4.3 34 0 34 0S12.6.3 7.4 1.7c-2.9.8-5.1 3.1-5.9 6C.1 13 0 24 0 24s.1 11 1.5 16.3c.8 2.9 3 5.2 5.9 6C12.6 47.7 34 48 34 48s21.4-.3 26.6-1.7c2.9-.8 5.1-3.1 5.9-6C67.9 35 68 24 68 24s-.1-11-1.5-16.3z' fill='%23f00'/%3E%3Cpath d='M45 24L27 14v20' fill='%23fff'/%3E%3C/svg%3E"); background-size: cover, 68px 48px; }`);
+    });
+    const css = rules.join('\n');
+    if (!st) {
+      if (!css) return;
+      st = d.createElement('style');
+      st.id = 'he-embed-styles';
+      st.setAttribute('data-he-injected', '');
+      d.head.appendChild(st);
+    }
+    if (st.textContent !== css) st.textContent = css;
+  }
 
   function loadDocument(html, filePath, opts = {}) {
     state.path = filePath || null;
@@ -227,6 +256,7 @@
     try { d.execCommand('defaultParagraphSeparator', false, 'p'); } catch {}
 
     wireFrame(d);
+    refreshEmbedStyles();
 
     const snap = bodyHtml();
     if (opts.keepHistory && snap !== state.snapshot) {
@@ -288,6 +318,7 @@
     state.snapshot = now;
     if (!state.dirty) setDirty(true);
     updateHistoryButtons();
+    refreshEmbedStyles();
   }
   const scheduleCommit = () => { clearTimeout(inputTimer); inputTimer = setTimeout(commit, 500); };
 
@@ -299,6 +330,7 @@
     state.snapshot = html;
     setDirty(true);
     updateHistoryButtons();
+    refreshEmbedStyles();
     renderProps();
     renderBreadcrumb();
   }
@@ -490,7 +522,9 @@
     ins.append(iconBtn('hr', 'Add divider', () => addBlock('hr')));
 
     const view = $('#tb-view');
-    const bPrev = iconBtn('eye', 'Preview in browser (F5)', preview); bPrev.innerHTML += '<span class="lbl">Preview</span>'; view.append(bPrev);
+    const bPrev = iconBtn('eye', 'Open the page in your web browser (F5)', preview); bPrev.innerHTML += '<span class="lbl">Browser</span>'; view.append(bPrev);
+    $('#mode-edit').addEventListener('click', () => setPreview(false));
+    $('#mode-preview').addEventListener('click', () => setPreview(true));
     const bCode = iconBtn('code', 'Show HTML code (Ctrl+E)', () => showCode(!state.codeMode)); bCode.id = 'btn-code'; bCode.innerHTML += '<span class="lbl">Code</span>'; view.append(bCode);
     const bOut = iconBtn('outlines', 'Show element outlines (Ctrl+Shift+O)', toggleOutlines); bOut.id = 'btn-outlines'; view.append(bOut);
     view.append(iconBtn('panelLeft', 'Show/hide blocks panel (Ctrl+1)', () => togglePanel(blocksPanel)));
@@ -555,8 +589,48 @@
     status(`Zoom ${Math.round(state.zoom * 100)}%`);
   }
 
+  // Preview: the page rendered for real (scripts, videos, links) in a separate
+  // frame loaded from a temporary file, so it behaves exactly like a browser.
+  const previewFrame = $('#preview');
+  const previewWrap = $('#preview-wrap');
+
+  async function setPreview(on) {
+    if (on === state.previewing) return;
+    if (on) {
+      if (state.codeMode) await showCode(false);
+      commit();
+      const html = getHtml();
+      if (!html) return;
+      const r = await api.writePreview(html, state.path);
+      if (!r) return;
+      state.previewPath = r.path;
+      state.previewing = true;
+      previewFrame.src = r.url;
+      previewWrap.hidden = false;
+      $('#canvas-scroll').hidden = true;
+      state.panelsBeforePreview = { blocks: blocksPanel.hidden, props: propsPanel.hidden };
+      blocksPanel.hidden = true;
+      propsPanel.hidden = true;
+      findBar(false);
+      status('Preview: this is how the page looks in a browser. Press Edit to keep editing.', 5000);
+    } else {
+      state.previewing = false;
+      previewWrap.hidden = true;
+      previewFrame.src = 'about:blank';
+      $('#canvas-scroll').hidden = false;
+      if (state.panelsBeforePreview) { blocksPanel.hidden = state.panelsBeforePreview.blocks; propsPanel.hidden = state.panelsBeforePreview.props; }
+      state.panelsBeforePreview = null;
+      if (state.previewPath) { api.removePreview(state.previewPath); state.previewPath = null; }
+      win() && win().focus();
+    }
+    document.getElementById('app').classList.toggle('previewing', state.previewing);
+    $('#mode-edit').classList.toggle('active', !state.previewing);
+    $('#mode-preview').classList.toggle('active', state.previewing);
+  }
+
   function showCode(on, { skipApply = false } = {}) {
     if (on === state.codeMode) return;
+    if (on && state.previewing) setPreview(false);
     state.codeMode = on;
     $('#btn-code').classList.toggle('active', on);
     codeWrap.hidden = !on;
@@ -611,6 +685,7 @@
   function addBlock(id) {
     const blk = BLOCKS.find((b) => b.id === id);
     if (!blk) return;
+    if (state.previewing) setPreview(false);
     if (blk.dialog === 'image') return openImageDialog();
     if (blk.dialog === 'link') return openLinkDialog();
     if (blk.dialog === 'table') return openTableDialog();
@@ -1166,10 +1241,12 @@
     return r === 1;
   }
   async function newPage() {
+    if (state.previewing) await setPreview(false);
     if (!(await confirmDiscard())) return;
     $('#dlg-new').showModal();
   }
   async function openFile(skipConfirm = false) {
+    if (state.previewing) await setPreview(false);
     if (!skipConfirm && !(await confirmDiscard())) return;
     const r = await api.openFile();
     if (r) { loadDocument(r.content, r.path); status(`Opened ${r.path}`); }
@@ -1213,6 +1290,7 @@
       case 'save': return save(false);
       case 'save-as': return save(true);
       case 'preview': return preview();
+      case 'toggle-preview': return setPreview(!state.previewing);
       case 'undo': return undo();
       case 'redo': return redo();
       case 'find': return findBar(true);
@@ -1234,6 +1312,7 @@
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'z' && !isTextInput(e.target)) { e.preventDefault(); undo(); }
     if (((mod && e.shiftKey && e.key.toLowerCase() === 'z') || (mod && e.key.toLowerCase() === 'y')) && !isTextInput(e.target)) { e.preventDefault(); redo(); }
     if (e.key === 'Escape' && !$('#find-bar').hidden) findBar(false);
+    else if (e.key === 'Escape' && state.previewing) setPreview(false);
   });
   const isTextInput = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
 
@@ -1263,7 +1342,7 @@
   }
 
   // Exposed for the automated smoke test only.
-  window.__he = { state, getHtml, loadDocument, insertBlock, addBlock, selectElement, undo, redo, commit, bodyHtml, changeTag, deleteSelected, save, showCode, embedUrl, BLOCKS };
+  window.__he = { state, getHtml, loadDocument, insertBlock, addBlock, selectElement, undo, redo, commit, bodyHtml, changeTag, deleteSelected, save, showCode, setPreview, refreshEmbedStyles, embedUrl, BLOCKS };
 
   init();
 })();

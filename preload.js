@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('htmlEditor', {
   saveFile: (filePath, content) => ipcRenderer.invoke('file:save', filePath, content),
   pickImage: (docPath) => ipcRenderer.invoke('file:pick-image', docPath),
   previewInBrowser: (content, docPath) => ipcRenderer.invoke('file:preview', content, docPath),
+  writePreview: (content, docPath) => ipcRenderer.invoke('file:write-preview', content, docPath),
+  removePreview: (previewPath) => ipcRenderer.invoke('file:remove-preview', previewPath),
 
   // App state
   setDirty: (dirty, fileName) => ipcRenderer.invoke('app:set-dirty', dirty, fileName),
